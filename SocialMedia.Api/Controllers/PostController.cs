@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using SocialMedia.Core.DTOs;
 using SocialMedia.Core.Entities;
 using SocialMedia.Core.Interfaces;
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SocialMedia.Api.Controllers
@@ -12,24 +13,19 @@ namespace SocialMedia.Api.Controllers
     public class PostController : ControllerBase
     {
         private readonly IPostRepository _postRepository;
+        private readonly IMapper _mapper;
 
-        public PostController(IPostRepository postRepository)
+        public PostController(IPostRepository postRepository, IMapper mapper)
         {
             _postRepository = postRepository;
+            _mapper = mapper;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetPosts()
         {
             var posts = await _postRepository.GetPosts();
-            var postsDto = posts.Select(x => new PostDto
-            {
-                PostId = x.PostId,
-                Description = x.Description,
-                Image = x.Image,
-                UserId = x.UserId,
-                Date = x.Date
-            });
+            var postsDto = _mapper.Map<IEnumerable<PostDto>>(posts);
 
             return Ok(postsDto);
         }
@@ -38,27 +34,15 @@ namespace SocialMedia.Api.Controllers
         public async Task<IActionResult> GetPost(int id)
         {
             var post = await _postRepository.GetPost(id);
-            var postDto = new PostDto
-            {
-                PostId = post.PostId,
-                Description = post.Description,
-                Image = post.Image,
-                UserId = post.UserId,
-                Date = post.Date
-            };
+            var postDto = _mapper.Map<PostDto>(post);
+
             return Ok(postDto);
         }
 
         [HttpPost]
         public async Task<IActionResult> Post(PostDto postDto)
         {
-            var post = new Post
-            {
-                Description = postDto.Description,
-                Image = postDto.Image,
-                UserId = postDto.UserId,
-                Date = postDto.Date
-            };
+            var post = _mapper.Map<Post>(postDto);
             await _postRepository.InsertPost(post);
             return Ok(post);
         }
