@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using SocialMedia.Api.Responses;
+using SocialMedia.Core.CustomEntities;
 using SocialMedia.Core.DTOs;
 using SocialMedia.Core.Entities;
 using SocialMedia.Core.Interfaces;
 using SocialMedia.Core.QueryFilters;
+using SocialMedia.Infrastructure.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -18,29 +20,35 @@ namespace SocialMedia.Api.Controllers
     {
         private readonly IPostService _postService;
         private readonly IMapper _mapper;
+        private readonly IUriService _uriService;
 
-        public PostController(IPostService postService, IMapper mapper)
+        public PostController(IPostService postService, IMapper mapper, IUriService uriService)
         {
             _postService = postService;
             _mapper = mapper;
+            _uriService = uriService;
         }
 
-        [HttpGet]
+        [HttpGet(Name = nameof(GetPosts))]
         public IActionResult GetPosts([FromQuery]PostQueryFilter filters)
         {
             var posts = _postService.GetPosts(filters);
             var postsDto = _mapper.Map<IEnumerable<PostDto>>(posts);
-            var response = new ApiResponse<IEnumerable<PostDto>>(postsDto);
-            var metadata = new
+            var metadata = new Metadata
             {
-                posts.TotalCount,
-                posts.PageSize,
-                posts.CurrentPage,
-                posts.TotalPages,
-                posts.HasNextPage,
-                posts.HasPreviousPage
+                TotalCount = posts.TotalCount,
+                PageSize = posts.PageSize,
+                CurrentPage = posts.CurrentPage,
+                TotalPages = posts.TotalPages,
+                HasNextPage = posts.HasNextPage,
+                HasPreviousPage = posts.HasPreviousPage,
+                NextPageUrl = _uriService.GetPostPaginationUri(filters, Url.RouteUrl(nameof(GetPosts))).ToString(),
+                PreviousPageUrl = _uriService.GetPostPaginationUri(filters, Url.RouteUrl(nameof(GetPosts))).ToString()
             };
-
+            var response = new ApiResponse<IEnumerable<PostDto>>(postsDto)
+            {
+                Meta = metadata
+            };
             Response.Headers.Add("x-Pagination", JsonConvert.SerializeObject(metadata));
 
             return Ok(response);
